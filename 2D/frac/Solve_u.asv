@@ -1,0 +1,76 @@
+function [u_n] = Solve_u( miu_x, miu_y, nx , ny, gamma )
+
+%----matrix -------------
+[ matrix_Delta_x_2,matrix_Delta_x ,matrix_A1x ,matrix_A2x ] = matrix_interior(nx-1);
+[matrix_Delta_y_2,matrix_Delta_y ,matrix_A1y ,matrix_A2y ] = matrix_interior(ny-1);
+
+H_1x = matrix_A1x - gamma*miu_x/4*matrix_Delta_x_2;
+H_1y = matrix_A1y - gamma*miu_y/4*matrix_Delta_y_2;
+H_2x = matrix_A1x + 1/4*gamma*miu_x*(matrix_Delta_x_2);
+
+tic
+ for k = 1:nt
+
+    %boundary condition
+    % u_n(1,:)=0;u_n(end,:)=0;
+    % u_n(:,1)=0;u_n(:,end)=0;
+
+    %保留A_1y*unPlusHf1,第2步里直接运用
+    u_bar_nPlusHf1 =  H_1x\( H_2x*u_n*matrix_A1y'+ miu_y *gamma/ 2*matrix_A1x*u_n*matrix_Delta_y_2'  );
+
+    u_nPlusHf2       = (u_bar_nPlusHf1-miu_y*gamma/4* u_n*matrix_Delta_y_2')/ H_1y' ;
+    %-----------limiter------------------------------------------
+    %    for j=1:ny
+    %        u_nPlusHf2(:,j) = limiter_2sides_final(nx,u_nPlusHf2(:,j),min(min(U0)),max(max(U0)));
+    %    end
+    %     for i=1:nx
+    %       u_nPlusHf2(i,:) = limiter_2sides_final(ny,u_nPlusHf2(i,:)',min(min(U0)),max(max(U0)))';
+    %     end
+    %---------------------------------------------------------------
+
+    u_nPlusHf3    = u_nPlusHf2 - matrix_A2x\matrix_Delta_x*lam_x* fun_f(u_nPlusHf2)...
+        - lam_y*(fun_g(u_nPlusHf2)) *matrix_Delta_y'/matrix_A2y' ...
+        + dt*fun_Source (X1,Y1, gamma, (k-1)*dt  ) ;  %g
+
+    %-----------limiter------------------------------------------
+    %    for i=1:nx
+    %       u_nPlusHf3(i,:) = limiter_2sides_final(ny,u_nPlusHf3(i,:)',min(min(U0)),max(max(U0)))';
+    %     end
+    %---------------------------------------------------------------
+
+    u_nPlusHf4    = u_nPlusHf2 -  matrix_A2x\matrix_Delta_x*lam_x* 0.5*(fun_f(u_nPlusHf2)+fun_f(u_nPlusHf3) ) ...%f
+        -   lam_y/2* (fun_g(u_nPlusHf3)+fun_g(u_nPlusHf2) ) * matrix_Delta_y' /matrix_A2y' ...
+        + dt/2 * ( fun_Source (X1,Y1, gamma, (k-1)*dt  ) + fun_Source (X1,Y1, gamma, (k)*dt  ) );%g;
+    %   -----------limiter------------------------------------------
+    %   for i=1:nx
+    %     u_nPlusHf4(i,:) = limiter_2sides_final(ny,u_nPlusHf4(i,1:end)',min(min(U0)),max(max(U0)))';
+    %   end
+
+    % u_nPlusHf4 = u_nPlusHf4';
+    %    for i=1:nx
+    %     u_nPlusHf4(:,i) = limiter_2sides_final(ny,u_nPlusHf4(:,i),min(min(U0)),max(max(U0)));
+    %    end
+    % u_nPlusHf4 = u_nPlusHf4';
+    %    ---------------------------------------------------------------
+    u_bar_nPlusHf5  =  H_1x\(H_2x*u_nPlusHf4 *matrix_A1y'+miu_y*gamma/ 2*matrix_A1x*u_nPlusHf4 *matrix_Delta_y_2');
+
+    u_n  =  (u_bar_nPlusHf5-miu_y/4*gamma*u_nPlusHf4*matrix_Delta_y_2')/ H_1y';
+
+    %-----------limiter------------------------------------------
+    %    for j=1:ny
+    %        u_n(:,j) = limiter_2sides_final(nx,u_n(:,j),min(min(U0)),max(max(U0)));
+    %    end
+    %     for i=1:nx
+    %       u_n(i,:) = limiter_2sides_final(ny,u_n(i,:)',min(min(U0)),max(max(U0)))';
+    %     end
+    %---------------------------------------------------------------
+
+
+  end
+
+
+
+
+
+ end
+
